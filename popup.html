@@ -26,23 +26,6 @@
     <div class="hint">Если пусто, плагин будет перенаправлять промпт на сайт Gemini. Получить ключ бесплатно: <a href="https://aistudio.google.com/" target="_blank">AI Studio</a></div>
 </div>
 
-<script>
-    const planACheck = document.getElementById('planA');
-    const apiKeyInput = document.getElementById('apiKey');
-
-    chrome.storage.local.get(['planAEnabled', 'geminiKey'], (res) => {
-        planACheck.checked = !!res.planAEnabled;
-        apiKeyInput.value = res.geminiKey || '';
-    });
-
-    planACheck.addEventListener('change', (e) => {
-        chrome.storage.local.set({ planAEnabled: e.target.checked });
-        chrome.runtime.sendMessage({ action: "togglePlanA", value: e.target.checked });
-    });
-
-    apiKeyInput.addEventListener('input', (e) => {
-        chrome.storage.local.set({ geminiKey: e.target.value.trim() });
-    });
-</script>
+<script src="popup.js"></script>
 </body>
 </html>
