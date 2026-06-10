@@ -1,0 +1,10 @@
+#resis-ai-btn {
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+#resis-ai-btn:hover {
+    background: #cc0000 !important;
+    transform: scale(1.03);
+}
+#resis-ai-btn:active {
+    transform: scale(0.97);
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { width: 240px; font-family: system-ui, sans-serif; padding: 12px; margin: 0; background: #181818; color: #eee; }
+        h3 { margin: 0 0 12px 0; color: #ff4444; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+        .option { margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+        label { font-size: 13px; }
+        input[type="text"] { width: 100%; background: #282828; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
+        .hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+        .hint a { color: #3ea6ff; text-decoration: none; }
+    </style>
+</head>
+<body>
+<h3>Digital Resistance</h3>
+
+<div class="option">
+    <label for="planA"><b>План А:</b> Подмена заголовков (США)</label>
+    <input type="checkbox" id="planA">
+</div>
+
+<div style="margin-top: 10px;">
+    <label><b>План Б:</b> Личный Gemini API Key</label>
+    <input type="text" id="apiKey" placeholder="AIzaSy...">
+    <div class="hint">Если пусто, плагин будет перенаправлять промпт на сайт Gemini. Получить ключ бесплатно: <a href="https://aistudio.google.com/" target="_blank">AI Studio</a></div>
+</div>
+
+<script>
+    const planACheck = document.getElementById('planA');
+    const apiKeyInput = document.getElementById('apiKey');
+
+    chrome.storage.local.get(['planAEnabled', 'geminiKey'], (res) => {
+        planACheck.checked = !!res.planAEnabled;
+        apiKeyInput.value = res.geminiKey || '';
+    });
+
+    planACheck.addEventListener('change', (e) => {
+        chrome.storage.local.set({ planAEnabled: e.target.checked });
+        chrome.runtime.sendMessage({ action: "togglePlanA", value: e.target.checked });
+    });
+
+    apiKeyInput.addEventListener('input', (e) => {
+        chrome.storage.local.set({ geminiKey: e.target.value.trim() });
+    });
+</script>
+</body>
+</html>
