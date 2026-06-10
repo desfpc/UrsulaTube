@@ -1,5 +1,4 @@
 function injectAIButton() {
-    // Расширенный список селекторов под новые А/Б тесты YouTube (включая контейнеры под лайками)
     const actionsMenu = document.querySelector(
         '#top-level-buttons-computed, ' +
         'ytd-menu-renderer, ' +
@@ -8,18 +7,13 @@ function injectAIButton() {
         'ytd-watch-metadata #actions'
     );
 
-    // Если меню еще не отрендерилось — уходим, сработает следующий тик интервала
     if (!actionsMenu) return;
-
-    // Если кнопка уже на месте — ничего не делаем
     if (document.getElementById('resis-ai-btn')) return;
 
     const aiBtn = document.createElement('button');
     aiBtn.id = 'resis-ai-btn';
-    // Нативный стиль YouTube-кнопки (подстраивается под темную/светлую тему)
     aiBtn.style = 'background: #ff0000; color: white; border: none; padding: 0 16px; margin-left: 8px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 13px; z-index: 9999; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif;';
 
-    // Проверяем ключ и ставим правильный текст
     chrome.storage.local.get(['geminiKey'], (res) => {
         aiBtn.innerText = res.geminiKey ? '⚡ Спросить встроенный ИИ' : '🚀 Отправить в Gemini Web';
     });
@@ -78,10 +72,8 @@ function injectAIButton() {
         });
     });
 
-    // Безопасная вставка кнопки без зацикливания обсервера
     if (observer) observer.disconnect();
 
-    // Вставляем в начало или в конец меню действий в зависимости от структуры
     if (actionsMenu.firstChild) {
         actionsMenu.insertBefore(aiBtn, actionsMenu.firstChild);
     } else {
@@ -109,53 +101,76 @@ function fallbackCopyText(text) {
 }
 
 async function extractTranscript() {
-    // Селекторы строк текста внутри открытого окна расшифровки
-    const getSegments = () => document.querySelectorAll(
-        'ytd-transcript-segment-renderer .segment-text, ' +
-        'ytd-transcript-segment-renderer .transcript-text, ' +
-        '.ytd-transcript-segment-renderer #segments-container .segment-text, ' +
-        'ytd-transcript-renderer #segments-container yt-formatted-string, ' +
-        '#segments-container .segment-text'
-    );
+    // Функция для сбора текста из нового контейнера .ytSectionListRendererContents и старых блоков
+    const getSegments = () => {
+        return document.querySelectorAll(
+            '.ytSectionListRendererContents yt-formatted-string, ' +
+            '.ytSectionListRendererContents span, ' +
+            'ytd-transcript-segment-renderer .segment-text, ' +
+            '#segments-container .segment-text'
+        );
+    };
 
+    // Если окно уже открыто кем-то, сразу собираем текст
     let textSegments = getSegments();
     if (textSegments.length > 0) {
         return Array.from(textSegments).map(el => el.innerText.trim()).join(' ');
     }
 
-    // Разворачиваем описание ролика
-    const expandBtn = document.querySelector('#expand, ytd-text-inline-expander, #description-inline-expander, .ytd-watch-metadata #expand');
-    if (expandBtn) expandBtn.click();
-    await new Promise(r => setTimeout(r, 400));
+    // 1. Раскрываем блок описания, если он свернут
+    const expandBtn = document.querySelector('#expand, ytd-text-inline-expander, #description-inline-expander');
+    if (expandBtn && expandBtn.getAttribute('aria-expanded') !== 'true') {
+        expandBtn.click();
+        await new Promise(r => setTimeout(r, 500));
+    }
 
-    // Ищем кнопку открытия окна расшифровки
-    const transcriptBtn = document.querySelector(
-        'button[aria-label="Показать текст видео"], ' +
-        'button[aria-label="Show transcript"], ' +
-        '#primary-button ytd-button-renderer button, ' +
-        'ytd-video-description-infocards-section-renderer button, ' +
-        '#action-panel-trigger button, ' +
-        'ytd-structured-description-content-renderer ytd-button-renderer button'
+    // 2. Ищем конкретную кнопку "Показать текст видео" по твоей разметке
+    let transcriptBtn = document.querySelector(
+        '#primary-button.ytd-video-description-transcript-section-renderer button, ' +
+        'ytd-video-description-transcript-section-renderer button[aria-label="Показать текст видео"], ' +
+        'ytd-video-description-transcript-section-renderer button[aria-label="Show transcript"]'
     );
 
-    if (transcriptBtn) {
-        transcriptBtn.click();
-    } else {
-        // Запасной перебор кнопок по тексту
-        const allButtons = document.querySelectorAll('ytd-structured-description-content-renderer button, ytd-button-renderer button');
-        for (let btn of allButtons) {
-            if (btn.innerText && (btn.innerText.includes('Показать текст') || btn.innerText.includes('Show transcript'))) {
-                btn.click();
+    // Запасной вариант: клик по табу-чипсу "Расшифровка видео", если YouTube подсунул такую разметку
+    if (!transcriptBtn) {
+        const chips = document.querySelectorAll('.ytChipShapeButtonReset, button[role="tab"]');
+        for (let chip of chips) {
+            if (chip.innerText && (chip.innerText.includes('Расшифровка') || chip.innerText.includes('Transcript'))) {
+                transcriptBtn = chip;
                 break;
             }
         }
     }
 
-    // Ждем рендера строк текста
+    // Запасной вариант 2: ищем кнопку по тексту "Показать текст видео" внутри всего описания
+    if (!transcriptBtn) {
+        const allButtons = document.querySelectorAll('#expanded button, ytd-structured-description-content-renderer button');
+        for (let btn of allButtons) {
+            if (btn.innerText && (btn.innerText.includes('Показать текст') || btn.innerText.includes('Show transcript'))) {
+                transcriptBtn = btn;
+                break;
+            }
+        }
+    }
+
+    // Кликаем по найденной кнопке
+    if (transcriptBtn) {
+        transcriptBtn.click();
+    } else {
+        console.log('UrsulaTube: Кнопка расшифровки не найдена в DOM.');
+        return null;
+    }
+
+    // 3. Ждем появления текста в .ytSectionListRendererContents
     for (let i = 0; i < 15; i++) {
         textSegments = getSegments();
         if (textSegments.length > 0) {
-            return Array.from(textSegments).map(el => el.innerText.trim()).join(' ');
+            // Фильтруем пустые строки и склеиваем текст роликов
+            const text = Array.from(textSegments)
+                .map(el => el.innerText.trim())
+                .filter(txt => txt.length > 0)
+                .join(' ');
+            if (text.length > 100) return text; // Убеждаемся, что распарсили именно текст роликов, а не заголовки
         }
         await new Promise(r => setTimeout(r, 200));
     }
@@ -163,7 +178,6 @@ async function extractTranscript() {
     return null;
 }
 
-// Перезапуск обсервера только при добавлении значимых DOM-элементов плеера
 const observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
         if (mutation.addedNodes.length > 0) {
@@ -177,7 +191,5 @@ function startObserver() {
     observer.observe(document.body, { childList: true, subtree: true });
 }
 
-// Старт
 startObserver();
-// Жесткий интервал-подстраховка для SPA-переходов внутри YouTube
 setInterval(injectAIButton, 1500);
