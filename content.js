@@ -8,46 +8,42 @@ function injectAIButtons() {
     );
 
     if (!actionsMenu) return;
-
-    // Предотвращаем дублирование кнопок
     if (document.getElementById('resis-ai-btn') || document.getElementById('resis-ask-btn')) return;
 
-    // Кнопка 1: Краткий пересказ
     const summaryBtn = document.createElement('button');
     summaryBtn.id = 'resis-ai-btn';
-    summaryBtn.style = 'background: #ff0000; color: white; border: none; padding: 0 16px; margin-left: 8px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 13px; z-index: 9999; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif;';
+    summaryBtn.style = 'background: #ff0000; color: white; border: none; padding: 0 16px; margin-left: 8px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 13px; z-index: 9999; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif; flex-shrink: 0;';
 
-    // Кнопка 2: Спросить ИИ по контексту
     const askBtn = document.createElement('button');
     askBtn.id = 'resis-ask-btn';
-    askBtn.style = 'background: #282828; color: white; border: 1px solid #444; padding: 0 16px; margin-left: 8px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 13px; z-index: 9999; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif;';
+    askBtn.style = 'background: #282828; color: white; border: 1px solid #444; padding: 0 16px; margin-left: 8px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 13px; z-index: 9999; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif; flex-shrink: 0;';
 
-    // Динамический текст в зависимости от наличия ключа в хранилище
+    // Задаем тексты и нативные подсказки при наведении (title)
     chrome.storage.local.get(['geminiKey'], (res) => {
         const hasKey = !!res.geminiKey;
-        summaryBtn.innerText = hasKey ? '📋 Краткий пересказ' : '🚀 Пересказ в Gemini Web';
-        askBtn.innerText = hasKey ? '💬 Спросить ИИ' : '🚀 Задать вопрос в Web';
+        summaryBtn.innerText = hasKey ? '📋 Краткий пересказ' : '🚀 Пересказ в Web';
+        summaryBtn.title = hasKey ? 'Получить краткий пересказ видео' : 'Открыть пересказ в веб-версии Gemini';
+
+        askBtn.innerText = hasKey ? '💬 Спросить ИИ' : '🚀 Вопрос в Web';
+        askBtn.title = hasKey ? 'Задать кастомный вопрос по видео' : 'Задать вопрос в веб-версии Gemini';
     });
 
-    // --- ЛОГИКА КНОПКИ ПЕРЕСКАЗА ---
+    // Логика кликов остается прежней...
     summaryBtn.addEventListener('click', async () => {
         const originalText = summaryBtn.innerText;
-        summaryBtn.innerText = 'Парсим транскрипт...';
-
+        summaryBtn.innerText = 'Парсим...';
         const transcript = await extractTranscript();
         if (!transcript) {
-            summaryBtn.innerText = '❌ Включи субтитры!';
+            summaryBtn.innerText = '❌ Нет субтитров';
             setTimeout(() => { restoreButtonTexts(); }, 3000);
             return;
         }
-
         chrome.storage.local.get(['geminiKey'], async (res) => {
             const key = res.geminiKey;
             const promptText = `Сделай краткую качественную выжимку (Summary) этого видео на основе его транскрипта, выдели главные тезисы таймлайна:\n\n${transcript.substring(0, 60000)}`;
-
             if (key) {
                 summaryBtn.innerText = 'ИИ думает...';
-                createOrOpenChatWindow(actionsMenu, 'Выжимка видео...');
+                createOrOpenChatWindow('Выжимка видео...');
                 const answer = await queryGeminiAPI(key, promptText);
                 updateChatOutput(answer);
             } else {
@@ -61,34 +57,25 @@ function injectAIButtons() {
         });
     });
 
-    // --- ЛОГИКА КНОПКИ ДИАЛОГА ---
     askBtn.addEventListener('click', async () => {
-        const originalText = askBtn.innerText;
-
         chrome.storage.local.get(['geminiKey'], async (res) => {
             const key = res.geminiKey;
-
             if (key) {
-                // Если ключ есть — просто разворачиваем интерактивное окно ввода вопроса под плеером
-                createOrOpenChatWindow(actionsMenu, 'Задай любой вопрос по содержанию этого видео...');
+                createOrOpenChatWindow('Задай любой вопрос по содержанию этого видео...');
             } else {
-                // Если ключа нет — просим ввести вопрос через обычный prompt и кидаем на веб-версию
                 const userQuestion = prompt('Введите ваш вопрос к видео:');
                 if (!userQuestion) return;
-
                 askBtn.innerText = 'Парсим...';
                 const transcript = await extractTranscript();
                 if (!transcript) {
-                    askBtn.innerText = '❌ Включи субтитры!';
+                    askBtn.innerText = '❌ Нет субтитров';
                     setTimeout(() => { restoreButtonTexts(); }, 3000);
                     return;
                 }
-
-                const promptText = `Перед тобой транскрипт видео:\n\n${transcript.substring(0, 50000)}\n\nОтветь на следующий вопрос пользователя по этому видео: ${userQuestion}`;
-
+                const promptText = `Before you is a video transcript:\n\n${transcript.substring(0, 50000)}\n\nAnswer user question: ${userQuestion}`;
                 askBtn.innerText = 'Копируем...';
                 if (fallbackCopyText(promptText)) {
-                    alert('Контекст и вопрос скопированы! На сайте Gemini просто нажми Ctrl+V.');
+                    alert('Контекст скопирован! Нажмите Ctrl+V на сайте Gemini.');
                     window.open('https://gemini.google.com/app', '_blank');
                 }
                 restoreButtonTexts();
@@ -96,7 +83,6 @@ function injectAIButtons() {
         });
     });
 
-    // Вставка кнопок в меню действий YouTube
     if (observer) observer.disconnect();
     if (actionsMenu.firstChild) {
         actionsMenu.insertBefore(askBtn, actionsMenu.firstChild);
@@ -114,14 +100,25 @@ function restoreButtonTexts() {
         const hasKey = !!res.geminiKey;
         const sBtn = document.getElementById('resis-ai-btn');
         const aBtn = document.getElementById('resis-ask-btn');
-        if (sBtn) sBtn.innerText = hasKey ? '📋 Краткий пересказ' : '🚀 Пересказ в Gemini Web';
-        if (aBtn) aBtn.innerText = hasKey ? '💬 Спросить ИИ' : '🚀 Задать вопрос в Web';
+        if (sBtn) {
+            sBtn.innerText = hasKey ? '📋 Краткий пересказ' : '🚀 Пересказ в Web';
+            sBtn.title = hasKey ? 'Получить краткий пересказ видео' : 'Открыть пересказ в веб-версии Gemini';
+        }
+        if (aBtn) {
+            aBtn.innerText = hasKey ? '💬 Спросить ИИ' : '🚀 Вопрос в Web';
+            aBtn.title = hasKey ? 'Задать кастомный вопрос по видео' : 'Задать вопрос в веб-версии Gemini';
+        }
     });
 }
 
 // --- УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ ЧАТА НА СТРАНИЦЕ ---
-function createOrOpenChatWindow(parentElement, initialText) {
+function createOrOpenChatWindow(initialText) {
     let chatDiv = document.getElementById('ursula-chat-frame');
+
+    // Ищем контейнер основного контента левой колонки YouTube
+    const primaryColumn = document.querySelector('#primary, ytd-watch-metadata, #primary-inner');
+    if (!primaryColumn) return;
+
     if (!chatDiv) {
         chatDiv = document.createElement('div');
         chatDiv.id = 'ursula-chat-frame';
@@ -139,20 +136,18 @@ function createOrOpenChatWindow(parentElement, initialText) {
             </div>
         `;
 
-        // Вставляем блок сразу под блоком кнопок действий
-        parentElement.parentNode.insertBefore(chatDiv, parentElement.nextSibling);
+        // Вставляем фрейм чата в самый верх блока primary (или сразу под метаданные видео),
+        // гарантируя полноценную ширину по размеру плеера
+        primaryColumn.appendChild(chatDiv);
 
-        // Вешаем событие закрытия окна чата
         document.getElementById('ursula-chat-close-btn').addEventListener('click', () => {
             chatDiv.remove();
         });
 
-        // Отправка вопроса по клику или Enter
         const sendQuestion = () => {
             const inputField = document.getElementById('ursula-chat-input-field');
             const question = inputField.value.trim();
             if (!question) return;
-
             inputField.value = '';
             processCustomQuestion(question);
         };
@@ -163,6 +158,7 @@ function createOrOpenChatWindow(parentElement, initialText) {
         });
     } else {
         document.getElementById('ursula-chat-output-area').innerText = initialText;
+        chatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
 
