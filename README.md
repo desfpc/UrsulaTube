@@ -18,10 +18,13 @@
 * Сбрасывает куки европейского цифрового следа (`X-Goog-Visitor-Id`).
 * Меняет контекст клиента, заставляя YouTube думать, что вы чистокровный американец, и разблокировать родные генеративные фичи.
 
-### 🚀 План Б: Независимый ИИ-Ассистент (Выжимка видео через Gemini 1.5 Flash)
-Если Google врубает жесткий бэкенд-геофенсинг, UrsulaTube активирует план «Б» и встраивает альтернативный ИИ-инструмент прямо в интерфейс YouTube (под плеер рядом с кнопками лайков):
-1. **Режим с API-ключом (Luxury):** Вы вставляете свой личный бесплатный ключ от Google AI Studio. Расширение за секунду парсит транскрипт любого (даже часового) видео, скармливает его модели `gemini-1.5-flash` и выдает готовое саммари прямо на странице.
-2. **Режим без ключа (Fallback):** Если ключа нет, расширение само соберет транскрипт, упакует его в идеальный промпт для выжимки, скопирует в буфер обмена и откроет веб-версию Gemini. Вам останется только нажать `Ctrl+V` и `Enter`.
+### 🚀 План Б: Интерактивный ИИ-Ассистент (Модель Gemini 3.1 Flash-Lite)
+Если Google врубает жесткий бэкенд-геофенсинг, UrsulaTube активирует план «Б» и встраивает две адаптивные кнопки управления прямо в нативный интерфейс YouTube (рядом с кнопками лайков). Панель адаптирована под экраны ноутбуков, защищена от двухстрочных переносов текста и не перекрывается правой колонкой рекомендаций.
+
+1. **Режим с API-ключом (Luxury):** Вы вставляете личный бесплатный ключ от Google AI Studio.
+    * Кнопка **«📋 Краткий пересказ»** мгновенно генерирует выжимку видео.
+    * Кнопка **«💬 Спросить ИИ»** открывает встроенное диалоговое окно прямо под плеером. Нейросеть отвечает на любые точечные вопросы по содержанию, анализируя весь транскрипт видео.
+2. **Режим без ключа (Fallback):** Если ключа нет, расширение переходит в веб-режим. Оно автоматически соберет транскрипт, упакует его вместе с вашим вопросом/запросом на пересказ в буфер обмена и откроет официальный сайт Gemini Web. Вам останется только нажать `Ctrl+V` и `Enter`.
 
 ---
 
@@ -29,11 +32,11 @@
 
 Проект построен на чистом JavaScript (Manifest V3) по принципу KISS (Keep It Simple, Stupid) — никакого Node.js/NPM хаоса, никаких тяжелых фронтенд-фреймворков и лишних зависимостей.
 
-* `manifest.json` — конфигурация и права доступа расширения.
-* `background.js` — бэкграунд-скрипт для перехвата сетевого трафика и подмены гео-заголовков.
-* `content.js` — скрипт внедрения в DOM YouTube, парсинга субтитров и работы с API.
-* `popup.html` — минималистичный и удобный пульт управления расширением.
-* `styles.css` — нативные стили для интеграции элементов в темную и светлую темы YouTube.
+* `manifest.json` — конфигурация, декларативные правила матчинга и права доступа расширения.
+* `background.js` — бэкграунд-скрипт (Service Worker) для перехвата сетевого трафика и подмены гео-заголовков.
+* `content.js` — скрипт внедрения в DOM YouTube, парсинга субтитров, рендера интерфейса чата и работы с API.
+* `popup.html` / `popup.js` — минималистичный пульт управления расширением и скрипт безопасного сохранения настроек в локальное хранилище расширения согласно CSP.
+* `styles.css` — нативные стили для кнопок и формы чата, интегрированные в темную и светлую темы YouTube и поддерживающие гибкую адаптивность.
 
 ---
 
@@ -55,6 +58,7 @@
 Проект распространяется под лицензией **WTFPL (Do What The Fuck You Want To Public License)**.
 Потому что в мире и так слишком много правил. Делайте с этим кодом всё, что вам заблагорассудится.
 
+===
 
 # UrsulaTube: Digital Resistance 🇪🇺🚫⚡
 
@@ -77,10 +81,13 @@ When enabled, the extension utilizes the `declarativeNetRequest` API to intercep
 * Strips out EU-specific tracking tokens (`X-Goog-Visitor-Id`).
 * **Result:** YouTube native interface unlocks its original conversational and generative AI features.
 
-### 🚀 Plan B: Independent AI Assistant (Video Summarization via Gemini 1.5 Flash)
-In case Google deploys hard backend geofencing that header modification can't solve, UrsulaTube activates Plan B. It injects a custom AI tool directly into the YouTube DOM (placed natively below the video player next to the like/share buttons):
-1. **API Key Mode (Luxury):** Provide your own free API key from Google AI Studio. The extension parses the transcript of any video (even hour-long ones) in a split second, feeds it to the `gemini-1.5-flash` model, and displays a comprehensive summary right on your screen.
-2. **Keyless Mode (Fallback):** If no key is provided, the extension will still scrape the video transcript, wrap it into a perfectly optimized summary prompt, copy it to your clipboard, and open Gemini Web. All you have to do is hit `Ctrl+V` and `Enter`.
+### 🚀 Plan B: Interactive AI Assistant (Powered by Gemini 3.1 Flash-Lite)
+In case Google deploys hard backend geofencing that header modification can't solve, UrsulaTube activates Plan B. It injects two responsive control buttons directly into the native YouTube DOM next to the like/share section. The UI handles smaller laptop layouts perfectly, utilizing text overflow truncation and strategic positioning to prevent any overlaps caused by the sidebar recommendations container.
+
+1. **API Key Mode (Luxury):** Provide your own free API key from Google AI Studio.
+    * The **"📋 Краткий пересказ"** button generates an instant structured outline of the timeline.
+    * The **"💬 Спросить ИИ"** button opens a fully featured contextual chat window built into the page directly below the video player. Ask anything, and the AI resolves specific answers based on the entire live video transcript.
+2. **Keyless Mode (Fallback):** If no key is provided, the extension seamlessly switches to a hybrid web routine. It scrapes the video transcript, wraps it along with your inquiry/summary prompt into the clipboard, and triggers Gemini Web. All you have to do is hit `Ctrl+V` and `Enter`.
 
 ---
 
@@ -88,11 +95,11 @@ In case Google deploys hard backend geofencing that header modification can't so
 
 Built entirely in pure JavaScript (Manifest V3) adhering strictly to the **KISS (Keep It Simple, Stupid)** principle. No Node.js/NPM bloat, no heavy frontend frameworks, and zero external dependencies.
 
-* `manifest.json` — Extension configuration, matching rules, and permissions.
+* `manifest.json` — Extension configuration, declarative matching rules, and permissions.
 * `background.js` — Background service worker handles network traffic interception and geo-spoofing.
-* `content.js` — Content script handles DOM injection, transcript extraction, and direct API communication.
-* `popup.html` — A minimalist control panel to manage your settings.
-* `styles.css` — Native styling ensuring seamless UI integration with both Dark and Light YouTube themes.
+* `content.js` — Content script handles DOM injection, layout responsiveness, text extraction, and direct API communication.
+* `popup.html` / `popup.js` — A minimalist control panel accompanied by a dedicated script to securely persist settings inside local extension storage following CSP policies.
+* `styles.css` — Native styling ensuring seamless responsive UI integration with both Dark and Light YouTube themes.
 
 ---
 
